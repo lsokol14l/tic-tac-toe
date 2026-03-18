@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль — Крестики-нолики</title>
+    <link rel="icon" type="image/x-icon" th:href="@{/favicon.ico}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap"
+          rel="stylesheet">
+    <style>body {
+        font-family: 'Google Sans', sans-serif;
+    }</style>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+<div id="app" class="w-full max-w-md">
+
+    <div class="bg-white rounded-xl shadow-lg p-8 space-y-6">
+
+        <!-- Шапка -->
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-slate-900">Профиль</h1>
+            <button @click="goBack"
+                    class="px-4 py-2 text-sm bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-all">
+                ← Назад
+            </button>
+        </div>
+
+        <!-- Аватар + имя -->
+        <div class="p-4 bg-slate-50 rounded-lg flex items-center gap-4">
+            <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                {{ username.charAt(0).toUpperCase() }}
+            </div>
+            <div>
+                <p class="font-semibold text-slate-900 text-lg">{{ username }}</p>
+                <p class="text-xs text-slate-400 font-mono">{{ currentUserId ? currentUserId.substring(0, 8) + '...' :
+                    '' }}</p>
+            </div>
+        </div>
+
+        <!-- Статистика -->
+        <div class="grid grid-cols-4 gap-3 text-center">
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-2xl font-bold text-slate-800">{{ totalGames }}</p>
+                <p class="text-xs text-slate-500 mt-1">Всего</p>
+            </div>
+            <div class="p-3 bg-green-50 rounded-lg">
+                <p class="text-2xl font-bold text-green-700">{{ wins }}</p>
+                <p class="text-xs text-green-600 mt-1">Победы</p>
+            </div>
+            <div class="p-3 bg-red-50 rounded-lg">
+                <p class="text-2xl font-bold text-red-700">{{ losses }}</p>
+                <p class="text-xs text-red-600 mt-1">Поражения</p>
+            </div>
+            <div class="p-3 bg-amber-50 rounded-lg">
+                <p class="text-2xl font-bold text-amber-700">{{ draws }}</p>
+                <p class="text-xs text-amber-600 mt-1">Ничьи</p>
+            </div>
+        </div>
+
+        <!-- История игр -->
+        <div>
+            <div class="flex justify-between items-center mb-3">
+                <p class="text-sm font-medium text-slate-600">История игр:</p>
+                <button @click="loadMyGames" :disabled="loading"
+                        class="text-xs px-3 py-1 bg-slate-100 text-slate-600 rounded-md hover:bg-slate-200 transition-all disabled:opacity-50">
+                    {{ loading ? '...' : '↻ Обновить' }}
+                </button>
+            </div>
+
+            <div v-if="loading" class="text-center py-8 text-slate-400">Загрузка...</div>
+
+            <div v-else-if="myGames.length === 0"
+                 class="text-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
+                У вас ещё нет игр.<br>
+                <span class="text-sm">Сыграйте первую партию!</span>
+            </div>
+
+            <div v-else class="space-y-2 max-h-72 overflow-y-auto">
+                <div v-for="game in myGames" :key="game.id"
+                     class="flex justify-between items-center p-3 border border-slate-200 rounded-lg">
+                    <div>
+                        <p class="text-xs text-slate-400 font-mono">{{ game.id.substring(0, 8) }}...</p>
+                        <p class="text-sm font-medium text-slate-700">{{ gameModeLabel(game.gameMode) }}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <!-- Кнопка "Продолжить" только для активных игр -->
+                        <button v-if="game.status === 'PLAYING' || game.status === 'WAITING_FOR_PLAYERS'"
+                                @click="goToGame(game.id)"
+                                class="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-all">
+                            Продолжить
+                        </button>
+                        <span class="text-sm font-semibold px-3 py-1 rounded-full" :class="{
+            'bg-green-100 text-green-700':  gameResultForMe(game) === 'Победа',
+            'bg-red-100 text-red-700':      gameResultForMe(game) === 'Поражение',
+            'bg-amber-100 text-amber-700':  gameResultForMe(game) === 'Ничья',
+            'bg-blue-100 text-blue-700':    gameResultForMe(game) === 'В процессе'
+        }">
+            {{ gameResultForMe(game) }}
+        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="error" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {{ error }}
+        </div>
+    </div>
+
+</div>
+<script th:src="@{/js/profile.js}"></script>
+</body>
+</html>
