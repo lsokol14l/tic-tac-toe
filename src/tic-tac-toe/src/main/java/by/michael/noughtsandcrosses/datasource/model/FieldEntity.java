@@ -14,7 +14,7 @@ public class FieldEntity {
   public static final int FIELD_HEIGHT = 3;
 
   @Convert(converter = IntMatrixConverter.class)
-  @Column(name = "field", nullable = false, columnDefinition = "jsonb")
+  @Column(name = "field", nullable = false)
   @Getter
   @Setter
   private int[][] field;
